@@ -45,12 +45,29 @@ public class Pawns : MonoBehaviour
         //     pathprefab.transform.position = mousePosition;
             
         // }
+        // Check if the pawn is stationary
+        if (Vector2.Distance(transform.position, lastPosition) < 0.01f)
+        {
+            stationaryTime += Time.deltaTime;
+        }
+        else
+        {
+            stationaryTime = 0f;
+            lastPosition = transform.position;
+        }
+        FixPathNotFound();
     }
 
+
+    bool isNotMovingForAWhile()
+    {
+        // Detect if the pawn is not moving for a while
+        return stationaryTime >= stationaryThreshold;
+    }
     //Get task interval
     private void FixedUpdate()
     {
-        FixPathNotFound();
+        
         if (tempPath)
         {
             return;
@@ -66,33 +83,53 @@ public class Pawns : MonoBehaviour
     }
     void RoamTheWorld()
     {
-        //randomize path prefab position
-        if (destinations.Count == 0)
-        {
-            Vector2 randomPosition = new Vector2(Random.Range(-10, 10), Random.Range(-10, 10));
-            GameObject path = Instantiate(pathprefab, randomPosition, Quaternion.identity);
-            destinations.Add(path.transform);
-        }
+        
 
     }
-
+    private Vector2 lastPosition;
+    private float stationaryTime = 0f;
+    private float stationaryThreshold = 5f;
     private bool tempPath = false;
+    private float stuckTimer = 0f;
+    private float stuckThreshold = 2f;
+
+    private GameObject tempPathObject;
     void FixPathNotFound()
     {
-        //If in the pawn not moving for a while, add random destination nearby
-        if (Vector2.Distance(transform.position, destination) < 0.1f)
+        // If the pawn is not moving for a while, add a random destination nearby
+        if (isNotMovingForAWhile())
         {
-            tempPath = true;
-            Vector2 randomPosition = new Vector2(Random.Range(-5, 5), Random.Range(-5, 5));
-            GameObject path = Instantiate(pathprefab, randomPosition, Quaternion.identity);
-            destinations.Add(path.transform);
+            if (GameManager.instance.constructionToDo.Count > 0)
+            {
+                //randomize the task
+                AID.target = GameManager.instance.constructionToDo[Random.Range(0, GameManager.instance.constructionToDo.Count)].transform;
+                return;
+            }
+            else
+            {
+                Debug.Log("Pawn is stuck");
+                tempPath = true;
+                Vector2 randomPosition = new Vector2(Random.Range(-10, 10), Random.Range(-5, 5));
+                GameObject path = Instantiate(pathprefab, randomPosition, Quaternion.identity);
+                tempPathObject = path;
+                AID.target = path.transform;
+                destination = path.transform.position;
+                stationaryTime = 0f; // Reset the stationary timer
+            }
+            
         }
+
         if (tempPath)
         {
             if (Vector2.Distance(transform.position, destination) < 0.1f)
             {
+                Destroy(tempPathObject); // Destroy the temporary path object
                 tempPath = false;
-                destinations.RemoveAt(0);
+                if (destinations.Count > 0)
+                {
+                    Destroy(destinations[0].gameObject); // Destroy the temporary path object
+                    destinations.RemoveAt(0);
+                }
             }
         }
     }
@@ -104,8 +141,10 @@ public class Pawns : MonoBehaviour
             GameObject task = GameManager.instance.constructionToDo[0];
             //Set the destination
             AID.target = task.transform;
-            // AID.target = task.transform;
-            task.GetComponent<Walls>().worker = this;
+            destination = task.transform.position;
+            // Call The Interact Method
+            IInteractable interactable = task.GetComponent<IInteractable>();
+            interactable.Interact(this);
         }
     }
     void Move(Vector2 coordinates)

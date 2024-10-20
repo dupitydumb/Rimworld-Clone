@@ -2,9 +2,19 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Pathfinding;
-public class Walls : MonoBehaviour
+
+public enum ResourceType
+{
+    Wood,
+    Stone,
+    Iron
+}
+public class Walls : MonoBehaviour, IInteractable
 {
 
+    public ResourceType resourceType;
+    public int resourceAmount;
+    private Color32 originalColor;
     public float updateRadius = 5f;
     public float constructionTime = 5f;
 
@@ -12,43 +22,67 @@ public class Walls : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        // Store the original color
+        originalColor = GetComponent<SpriteRenderer>().color;
         // Set collision to false
         GetComponent<BoxCollider2D>().enabled = false;
-        // Set color to transparent
-        GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 0.4f);
+        // Set color to transparent. set the alpha only
+        GetComponent<SpriteRenderer>().color = new Color32(originalColor.r, originalColor.g, originalColor.b, 100);
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (worker != null && worker.destinations.Count > 0)
+        if (worker != null)
         {
             // Check if the worker is close to the wall
-            if (Vector2.Distance(worker.transform.position, transform.position) < 0.6f)
+            if (Vector2.Distance(worker.transform.position, transform.position) < 0.8f)
             {
-                // Start construction
-                constructionTime -= Time.deltaTime;
-                if (constructionTime <= 0)
-                {
-                    // Find a safe position for the worker
-                    Vector3 safePosition = FindSafePosition(worker.transform.position);
-
-                    // Move the worker to the safe position
-                    worker.transform.position = safePosition;
-
-                    // Enable collision
-                    worker = null;
-                    GetComponent<BoxCollider2D>().enabled = true;
-                    // Set color to opaque
-                    GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 1);
-                    GameManager.instance.constructionToDo.Remove(gameObject);
-                    // Update the graph near the wall
-                    UpdateGraphNearWall();
-                }
+                BuildWall();
             }
         }
     }
 
+    public void BuildWall()
+    {
+        constructionTime -= Time.deltaTime;
+        if (constructionTime <= 0)
+        {
+            // Find a safe position for the worker
+            Vector3 safePosition = FindSafePosition(worker.transform.position);
+
+            // Move the worker to the safe position
+            worker.transform.position = safePosition;
+
+            // Enable collision
+            worker = null;
+            GetComponent<BoxCollider2D>().enabled = true;
+            // Set color to opaque
+            GetComponent<SpriteRenderer>().color = originalColor;
+            GameManager.instance.constructionToDo.Remove(gameObject);
+            // Update the graph near the wall
+            UpdateGraphNearWall();
+        }
+    }
+    public void Interact(Pawns pawns)
+    {
+        if (worker == null)
+        {
+            worker = pawns;
+        }
+    }
+
+    public void CancelInteraction()
+    {
+        if (worker != null)
+        {
+            worker.destinations.Remove(transform);
+            worker = null;
+            GameManager.instance.constructionToDo.Remove(gameObject);
+        }
+    }
+
+    
     void UpdateGraphNearWall()
     {
         Vector3 wallPosition = transform.position;

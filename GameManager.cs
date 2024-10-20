@@ -1,10 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Pathfinding;
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager instance;
+
+    public bool isHoverUI = false;
     public bool isPlacing = false;
     public Grid grid;
 
@@ -21,6 +24,7 @@ public class GameManager : MonoBehaviour
     //Dictionary of bitmasks and their corresponding wall variants names
     private Dictionary<int, string> wallVariantDict = new Dictionary<int, string>();
 
+    public Inventory inventory;
 
     private void Awake()
     {
@@ -35,6 +39,8 @@ public class GameManager : MonoBehaviour
     }
     void Start()
     {
+        inventory = GetComponent<Inventory>();
+        placementHolder = toPlace.GetComponent<PlacementHolder>();
         // Initialize the dictionary
         wallVariantDict.Add(0, "Wall 12");
         wallVariantDict.Add(1, "Wall 13");
@@ -77,9 +83,17 @@ public class GameManager : MonoBehaviour
             Vector3 finalPos = grid.GetCellCenterWorld(gridPos);
             toPlace.transform.position = finalPos;
 
-            //check valid position
+            //Check if the placement is valid
+            if (CheckValidPlacement(gridPos) && placementHolder.isColliding == false)
+            {
+                toPlace.GetComponent<SpriteRenderer>().color = Color.green;
+            }
+            else
+            {
+                toPlace.GetComponent<SpriteRenderer>().color = Color.red;
+            }
         }
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) && !isHoverUI && placementHolder.isColliding == false)
         {
             //check if there is a wall at the position
 
@@ -93,27 +107,45 @@ public class GameManager : MonoBehaviour
                 // Remove the wall if it already exists
                 RemoveWall(gridPos);
             }
-            else
+            else if (CheckValidPlacement(gridPos))
             {
                 // Place a new wall if there is no wall at the position
-                PlaceWall(gridPos, finalPos);
+                PlaceWall(gridPos, finalPos , SetWallName);
             }
+        }
+        if (Input.GetMouseButtonDown(1))
+        {
+            isPlacing = false;
         }
     }
 
-    void PlaceWall(Vector3Int gridPos, Vector3 finalPos)
+    public string SetWallName;
+    private PlacementHolder placementHolder;
+    //Check placement validity
+    bool CheckValidPlacement(Vector3Int gridPos)
+    {
+        // Check if the position is not onto another wall
+        if (IsWall(gridPos) && !placementHolder.isColliding)
+        {
+            return false;
+        }
+
+        // Check if the position is not occupied by another wall
+        return !IsWall(gridPos);
+    }
+    void PlaceWall(Vector3Int gridPos, Vector3 finalPos, string wallName)
     {
         // Determine the facing condition using bitmasking
         int bitmask = GetWallBitmask(gridPos);
-        Debug.Log("Bitmask: " + bitmask);
-        // Instantiate the correct wall variant based on the bitmask
-        GameObject wall = Instantiate(wallVariants[bitmask], finalPos, Quaternion.identity);
-        wall.transform.SetParent(this.transform);
-        constructionToDo.Add(wall);
-        // Add the wall position to the HashSet and Dictionary
+        //Wall Resources Folder
+        GameObject wallPrefab = Resources.Load("Prefabs/Wall" + wallName + wallVariantDict[bitmask]) as GameObject;
+        //Debug path
+        Debug.Log("Prefabs/Wall" + wallName + wallVariantDict[bitmask]);
+        GameObject wall = Instantiate(wallPrefab, finalPos, Quaternion.identity);
         wallPositions.Add(gridPos);
-        wallObjects[gridPos] = wall;
-
+        wallObjects.Add(gridPos, wall);
+        constructionToDo.Add(wall);
+        UpdateConstruction();
         // Update the bitmask and sprite of the new wall and its neighbors
         UpdateWallSprite(gridPos);
         UpdateWallSprite(gridPos + Vector3Int.up);
@@ -128,6 +160,7 @@ public class GameManager : MonoBehaviour
         wallPositions.Remove(gridPos);
         Destroy(wallObjects[gridPos]);
         wallObjects.Remove(gridPos);
+        UpdateConstruction();
 
         // Update the bitmask and sprite of the neighbors
         UpdateWallSprite(gridPos + Vector3Int.up);
@@ -136,6 +169,18 @@ public class GameManager : MonoBehaviour
         UpdateWallSprite(gridPos + Vector3Int.left);
     }
 
+
+    //Update construction to do list
+    public void UpdateConstruction()
+    {  
+        foreach (GameObject construction in constructionToDo)
+        {
+            if (construction == null)
+            {
+                constructionToDo.Remove(construction);
+            }
+        }
+    }
     int GetWallBitmask(Vector3Int gridPos)
     {
         int bitmask = 0;
@@ -179,5 +224,22 @@ public class GameManager : MonoBehaviour
                 UnityEditor.Handles.Label(worldPos, bitmask.ToString());
             }
         }
+    }
+
+    public void SpawnWood(Vector3 position)
+    {
+        GameObject wood = Instantiate(Resources.Load("Prefabs/Resource/Wood"), position, Quaternion.identity) as GameObject;
+        wood.GetComponent<Items>().amount = Random.Range(3, 10);
+    }
+
+    public float updateRadius = 5f;
+    public void UpdateGraphNearObject(Vector3 transform)
+    {
+        Vector3 wallPosition = transform;
+        Bounds updateBounds = new Bounds(wallPosition, new Vector3(updateRadius * 2, updateRadius * 2, updateRadius * 2));
+
+        GraphUpdateObject guo = new GraphUpdateObject(updateBounds);
+        AstarPath.active.UpdateGraphs(guo);
+
     }
 }
