@@ -19,7 +19,8 @@ public class GameManager : MonoBehaviour
 
     public List<GameObject> zoneList;
     private HashSet<Vector3Int> wallPositions = new HashSet<Vector3Int>(); // HashSet to store wall positions
-    private Dictionary<Vector3Int, GameObject> wallObjects = new Dictionary<Vector3Int, GameObject>(); // Dictionary to store wall GameObjects
+    private HashSet<Vector3Int> floorPositions = new HashSet<Vector3Int>(); // HashSet to store floor positions
+    private Dictionary<Vector3Int, GameObject> objects = new Dictionary<Vector3Int, GameObject>(); // Dictionary to store wall GameObjects
 
 
     public List<GameObject> constructionToDo; 
@@ -167,7 +168,7 @@ public class GameManager : MonoBehaviour
         Debug.Log("Prefabs/Wall" + wallName + wallVariantDict[bitmask]);
         GameObject wall = Instantiate(wallPrefab, finalPos, Quaternion.identity);
         wallPositions.Add(gridPos);
-        wallObjects.Add(gridPos, wall);
+        objects.Add(gridPos, wall);
         AddTask(wall);
         UpdateConstruction();
         // Update the bitmask and sprite of the new wall and its neighbors
@@ -186,8 +187,8 @@ public class GameManager : MonoBehaviour
         currentPreviewPrefab = floorPrefab;
         Debug.Log("Prefabs/Floor" + floorName);
         GameObject floor = Instantiate(floorPrefab, finalPos, Quaternion.identity);
-        wallPositions.Add(gridPos);
-        wallObjects.Add(gridPos, floor);
+        floorPositions.Add(gridPos);
+        objects.Add(gridPos, floor);
         constructionToDo.Add(floor);
         UpdateConstruction();
     }
@@ -196,8 +197,8 @@ public class GameManager : MonoBehaviour
     {
         // Remove the wall position from the HashSet and Dictionary
         wallPositions.Remove(gridPos);
-        Destroy(wallObjects[gridPos]);
-        wallObjects.Remove(gridPos);
+        Destroy(objects[gridPos]);
+        objects.Remove(gridPos);
         UpdateConstruction();
 
         // Update the bitmask and sprite of the neighbors
@@ -205,6 +206,11 @@ public class GameManager : MonoBehaviour
         UpdateWallSprite(gridPos + Vector3Int.right);
         UpdateWallSprite(gridPos + Vector3Int.down);
         UpdateWallSprite(gridPos + Vector3Int.left);
+    }
+
+    void RemoveFloor(Vector3Int gridPos)
+    {
+        
     }
 
 
@@ -238,12 +244,18 @@ public class GameManager : MonoBehaviour
         return wallPositions.Contains(gridPos);
     }
 
+    bool IsFloor(Vector3Int gridPos)
+    {
+        // Check if the HashSet contains the grid position
+        return wallPositions.Contains(gridPos);
+    }
+
     void UpdateWallSprite(Vector3Int gridPos)
     {
-        if (wallObjects.ContainsKey(gridPos))
+        if (objects.ContainsKey(gridPos))
         {
             int bitmask = GetWallBitmask(gridPos);
-            GameObject wall = wallObjects[gridPos];
+            GameObject wall = objects[gridPos];
             SpriteRenderer spriteRenderer = wall.GetComponent<SpriteRenderer>();
             spriteRenderer.sprite = wallVariants[bitmask].GetComponent<SpriteRenderer>().sprite;
         }
@@ -286,11 +298,12 @@ public class GameManager : MonoBehaviour
     {
         constructionToDo.Remove(task);
         GameObject marker = task.transform.Find("Marker").gameObject;
-        if (marker == null)
+        if (marker != null)
         {
+            Destroy(marker);
             return;
         }
-        Destroy(marker);
+        
     }
     public void AddTask(GameObject task)
     {

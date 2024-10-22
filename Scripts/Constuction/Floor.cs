@@ -32,9 +32,15 @@ public class Floor : MonoBehaviour, IInteractable
         }
     }
 
-
+    bool isVfxSpawned = false;
     public void BuildFloor()
     {
+        if (!isVfxSpawned)
+        {
+            isVfxSpawned = true;
+            // Spawn the vfx
+            GameManager.instance.SpawnVFX(this.gameObject, constructionTime);
+        }
         constructionTime -= Time.deltaTime;
         if (constructionTime <= 0)
         {
@@ -42,8 +48,9 @@ public class Floor : MonoBehaviour, IInteractable
             GetComponent<SpriteRenderer>().color = originalColor;
             // GetComponent<BoxCollider2D>().enabled = true;
             //Remove task from the list
-            GameManager.instance.RemoveTask(gameObject);
             worker = null;
+            GameManager.instance.RemoveTask(gameObject);
+
         }
     }
 
