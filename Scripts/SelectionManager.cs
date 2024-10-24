@@ -50,16 +50,36 @@ public class SelectionManager : MonoBehaviour
 
     void SelectObjects()
     {
-        selectedObjects.Clear();
-        Rect selectionRect = new Rect(selectionBox.anchoredPosition - selectionBox.sizeDelta / 2, selectionBox.sizeDelta);
-        
-        foreach (GameObject obj in GameObject.FindGameObjectsWithTag("Tree"))
+
+
+        //convert canvas space position to world space position 2d
+        Vector2 min = selectionBox.TransformPoint(selectionBox.rect.min);
+        Vector2 max = selectionBox.TransformPoint(selectionBox.rect.max);
+        selectionBound = new Bounds((max + min) / 2, max - min);
+
+        //Convert the selection bounds from screen space to world space
+        selectionBound.size = Camera.main.ScreenToWorldPoint(selectionBound.size) - Camera.main.ScreenToWorldPoint(Vector3.zero);
+        selectionBound.center = Camera.main.ScreenToWorldPoint(selectionBound.center);
+
+        // Select all objects within the selection bounds on world space
+        Collider2D[] colliders = Physics2D.OverlapAreaAll(selectionBound.min, selectionBound.max);
+        foreach (var collider in colliders)
         {
-            if (selectionRect.Contains(Camera.main.WorldToScreenPoint(obj.transform.position)))
+            if (collider.CompareTag("Tree"))
             {
-                selectedObjects.Add(obj);
-                // Optionally change the color or highlight the selected object
+                selectedObjects.Add(collider.gameObject);
+                collider.GetComponent<SpriteRenderer>().color = Color.red;
             }
         }
+    }
+
+    private Bounds selectionBound;
+    void OnDrawGizmos()
+    {
+        // Draw the selection bounds on world space
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireCube(selectionBound.center, selectionBound.size);
+        
+
     }
 }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Pathfinding;
 
-public class Pawns : MonoBehaviour
+public class Pawns : MonoBehaviour, ISelectable
 {
     
     public Direction direction;
@@ -218,7 +218,33 @@ public class Pawns : MonoBehaviour
         Gizmos.color = Color.green;
         Gizmos.DrawWireSphere(transform.position, 0.6f);
     }
-    
+
+
+
+    public void Select()
+    {
+        // Change the color of the pawn when selected
+        head.GetComponent<SpriteRenderer>().color = Color.red;
+        body.GetComponent<SpriteRenderer>().color = Color.red;
+    }
+
+    public void Deselect()
+    {
+        // Change the color of the pawn when deselected
+        head.GetComponent<SpriteRenderer>().color = Color.white;
+        body.GetComponent<SpriteRenderer>().color = Color.white;
+    }
+
+    public Vector3 GetPosition()
+    {
+        return transform.position;
+    }
+
+    public GameObject GetGameObject()
+    {
+        return gameObject;
+    }
+
 }
 
 public enum Direction

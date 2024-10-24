@@ -48,6 +48,16 @@ public class Tree : MonoBehaviour, IInteractable, ISelectable
         
         Debug.Log("Deselected");
     }
+
+    public Vector3 GetPosition()
+    {
+        return transform.position;
+    }
+
+    public GameObject GetGameObject()
+    {
+        return gameObject;
+    }
     
 
     public void Interact(Pawns pawns)
