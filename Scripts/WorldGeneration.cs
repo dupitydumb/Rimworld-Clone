@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 public class WorldGeneration : MonoBehaviour
 {
@@ -18,8 +19,11 @@ public class WorldGeneration : MonoBehaviour
     public GameObject pathPrefab;
     public static WorldGeneration instance;
 
+    private Grid grid;
+
     public bool isGenerating = false;
 
+    public Dictionary<Vector3Int, GameObject> tilemap = new Dictionary<Vector3Int, GameObject>();
     private void Awake()
     {
         if (instance == null)
@@ -34,6 +38,7 @@ public class WorldGeneration : MonoBehaviour
 
     void Start()
     {
+        grid = GetComponent<Grid>();
         StartCoroutine(GenerateWorld());
     }
 
@@ -46,119 +51,132 @@ public class WorldGeneration : MonoBehaviour
     IEnumerator GenerateWorld()
     {
         isGenerating = true;
-        // Destroy all children if there are any
-        foreach (Transform child in transform)
-        {
-            Destroy(child.gameObject);
-        }
+        GeneratePerlinNoise();
+        yield return new WaitForSeconds(0.1f);
+        GenerateTrees();
+        yield return new WaitForSeconds(0.1f);
+        GenerateGrass();
+        AstarPath.active.Scan();
+    }
 
-        System.Random prng = new System.Random(seed);
-        float offsetX = prng.Next(-100000, 100000) + offset.x;
-        float offsetY = prng.Next(-100000, 100000) + offset.y;
-
+    void GeneratePerlinNoise()
+    {
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
-                float xCoord = (float)x / width * scale * noiseScale + offsetX;
-                float yCoord = (float)y / height * scale * noiseScale + offsetY;
+                float xCoord = (float)x / width * scale + offset.x;
+                float yCoord = (float)y / height * scale + offset.y;
                 float sample = Mathf.PerlinNoise(xCoord, yCoord);
-                float tileSize = 0.528f;
-                Vector3 position = new Vector3(x * tileSize, y * tileSize, 0);
-                GameObject tile = Instantiate(tilePrefab, position, Quaternion.identity);
-                // Set tile parent to this object
+                float z = Mathf.PerlinNoise(xCoord, yCoord) * noiseScale;
+
+                // Calculate the position of the center of the grid cell
+                Vector3Int gridPosition = new Vector3Int(x, y, 0);
+                Vector3 cellCenterPosition = grid.GetCellCenterWorld(gridPosition);
+                GameObject tile = Instantiate(tilePrefab, cellCenterPosition, Quaternion.identity);
                 tile.transform.SetParent(GameObject.FindWithTag("Noise").transform);
-                tile.GetComponent<SpriteRenderer>().color = new Color(sample, sample, sample); // Adjust color based on noise value
-
-                // switch the sprite based on the noise value
-                if (sample < 0.5)
-                {
-                    //70% chance to spawn a grass no 0
-                    if (prng.Next(0, 100) < 80)
-                    {
-                        //instantiate a 3-4 more grass around the bush
-                        for (int i = 0; i < prng.Next(1, 2); i++)
-                        {
-                            GameObject plant = grass[0];
-                            //random offset to place the plant
-                            float xOff = prng.Next(-1, 1);
-                            float yOff = prng.Next(-1, 1);
-                            Vector3 plantPosition = new Vector3(x * tileSize + xOff, y * tileSize + yOff, 0);
-                            GameObject go = Instantiate(plant, plantPosition, Quaternion.identity);
-                            //Set the parent to this object
-                            go.transform.SetParent(this.transform);
-                        }
-                    }
-                    // 20% chance to spawn a grass no 1 - max
-                    else if (prng.Next(0, 100) < 20)
-                    {
-                        //instantiate a 3-4 more grass around the bush
-                        for (int i = 0; i < prng.Next(1, 2); i++)
-                        {
-                            GameObject plant = grass[prng.Next(1, grass.Count)];
-                            //random offset to place the plant
-                            float xOff = prng.Next(-1, 1);
-                            float yOff = prng.Next(-1, 1);
-                            Vector3 plantPosition = new Vector3(x * tileSize + xOff, y * tileSize + yOff, 0);
-                            GameObject go = Instantiate(plant, plantPosition, Quaternion.identity);
-                            //Set the parent to this object
-                            go.transform.SetParent(this.transform);
-                        }
-                    }
-                }
-                else if (sample < 0.6)
-                {
-                    // 30% chance to spawn a tree
-                    if (prng.Next(0, 100) < 20)
-                    {
-                        GameObject plant = tree[prng.Next(0, tree.Count)];
-                        GameObject treeGO = Instantiate(plant, position, Quaternion.identity);
-                        //Set the parent to this object
-                        treeGO.transform.SetParent(this.transform);
-                        treeGO.GetComponent<SpriteRenderer>().sortingOrder = -(int)treeGO.transform.position.y;
-
-
-                        //spawn 4-6 more trees around the tree
-                        for (int i = 0; i < prng.Next(1, 1); i++)
-                        {
-                            GameObject plant2 = tree[prng.Next(0, tree.Count)];
-                            //random offset to place the plant
-                            float xOff = prng.Next(-3, 3);
-                            float yOff = prng.Next(-3, 3);
-                            Vector3 plantPosition = new Vector3(x * tileSize + xOff, y * tileSize + yOff, 0);
-                            GameObject go = Instantiate(plant2, plantPosition, Quaternion.identity);
-                            //Set the parent to this object
-                            go.transform.SetParent(this.transform);
-                            go.GetComponent<SpriteRenderer>().sortingOrder = -(int)go.transform.position.y;
-                            Debug.Log(go.name + " / " + go.GetComponent<SpriteRenderer>().sortingOrder);
-                        }
-                    }
-
-                    // 30% chance to spawn a grass
-                    else if (prng.Next(0, 100) < 30)
-                    {
-                        GameObject plant = grass[prng.Next(0, grass.Count)];
-                        GameObject grassGO = Instantiate(plant, position, Quaternion.identity);
-                        //Set the parent to this object
-                        grassGO.transform.SetParent(this.transform);
-                        grassGO.GetComponent<SpriteRenderer>().sortingOrder = -(int)grassGO.transform.position.y;
-                    }
-                    
-                }
-
-                // Yield control back to the main thread to avoid freezing
-                if (y % 10 == 0)
-                {
-                    yield return null;
-                }
+                tile.GetComponent<SpriteRenderer>().color = new Color(sample, sample, sample);
+                tilemap.Add(gridPosition, tile);
             }
-            // Yield control back to the main thread to avoid freezing
-            yield return null;
+        }
+        
+    }
+
+
+    void GenerateTrees()
+    {
+        // Collect positions where trees should be placed
+        List<Vector3Int> treePositions = new List<Vector3Int>();
+
+        foreach (KeyValuePair<Vector3Int, GameObject> tile in tilemap)
+        {
+            if (tile.Value.GetComponent<SpriteRenderer>().color.r < 0.5f)
+            {
+                treePositions.Add(tile.Key);
+            }
         }
 
-        // once the generation is done, set the flag to false
-        isGenerating = false;
+        // Define the minimum distance between trees
+        int minDistance = 2; // Adjust this value as needed
 
-        AstarPath.active.Scan();
+        // Place trees at the collected positions
+        foreach (Vector3Int gridPosition in treePositions)
+        {
+            // 60% chance of tree
+            if (Random.Range(0, 100) < 60)
+            {
+                // Check if there are any trees within the minimum distance
+                bool canPlaceTree = true;
+                for (int x = -minDistance; x <= minDistance; x++)
+                {
+                    for (int y = -minDistance; y <= minDistance; y++)
+                    {
+                        Vector3Int checkPosition = gridPosition + new Vector3Int(x, y, 0);
+                        if (tilemap.ContainsKey(checkPosition) && tilemap[checkPosition] != null && tilemap[checkPosition].CompareTag("Tree"))
+                        {
+                            canPlaceTree = false;
+                            break;
+                        }
+                    }
+                    if (!canPlaceTree)
+                    {
+                        break;
+                    }
+                }
+
+                if (canPlaceTree)
+                {
+                    Vector3 cellCenterPosition = grid.GetCellCenterWorld(gridPosition);
+                    GameObject treePrefab = tree[Random.Range(0, tree.Count)];
+                    GameObject treeInstance = Instantiate(treePrefab, cellCenterPosition, Quaternion.identity);
+                    // Set the order in layer to the y position of the tree
+                    treeInstance.GetComponent<SpriteRenderer>().sortingOrder = -(gridPosition.y);
+                    treeInstance.tag = "Tree"; // Set the tag to "Tree"
+                    tilemap[gridPosition] = treeInstance;
+                    //Set parent to the tree
+                    treeInstance.transform.SetParent(this.transform);
+                }
+            }
+        }
+    }
+
+    void GenerateGrass()
+    {
+        // Collect positions where trees should be placed
+        List<Vector3Int> grassPositions = new List<Vector3Int>();
+
+        foreach (KeyValuePair<Vector3Int, GameObject> tile in tilemap)
+        {
+            
+            if (tile.Value.GetComponent<SpriteRenderer>().color.r < 0.8f)
+            {
+                grassPositions.Add(tile.Key);
+            }
+        }
+
+        // Place trees at the collected positions
+        foreach (Vector3Int gridPosition in grassPositions)
+        {
+            //60 % chance of grass
+            if (Random.Range(0, 100) < 40)
+            {
+                Vector3 cellCenterPosition = grid.GetCellCenterWorld(gridPosition);
+                // 90% chance of spawning a grass[0]
+                GameObject grassPrefab;
+                if (Random.Range(0, 100) < 90)
+                {
+                    grassPrefab = grass[0];
+                }
+                else
+                {
+                    grassPrefab = grass[Random.Range(1, grass.Count)];
+                }
+                GameObject grassInstance = Instantiate(grassPrefab, cellCenterPosition, Quaternion.identity);
+                //Set the order in layer to the y position of the tree
+                grassInstance.GetComponent<SpriteRenderer>().sortingOrder = gridPosition.y;
+                tilemap[gridPosition] = grassInstance;
+                grassInstance.transform.SetParent(this.transform);
+            }
+        }
     }
 }
