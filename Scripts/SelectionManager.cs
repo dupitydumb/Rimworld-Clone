@@ -65,10 +65,11 @@ public class SelectionManager : MonoBehaviour
         Collider2D[] colliders = Physics2D.OverlapAreaAll(selectionBound.min, selectionBound.max);
         foreach (var collider in colliders)
         {
-            if (collider.CompareTag("Tree"))
+            //Get ISelctable component from the collider
+            ISelectable selectable = collider.GetComponent<ISelectable>();
+            if (selectable != null)
             {
-                selectedObjects.Add(collider.gameObject);
-                collider.GetComponent<SpriteRenderer>().color = Color.red;
+                selectable.Select();
             }
         }
     }

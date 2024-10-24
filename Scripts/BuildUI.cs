@@ -10,9 +10,12 @@ public class BuildUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     public BuildType buildType;
     public string wallName;
     private Button button;
+
+    GameManager gameManager;
     // Start is called before the first frame update
     void Start()
     {
+        gameManager = GameManager.instance;
         button = GetComponent<Button>();
         button.onClick.AddListener(Build);
     }
@@ -25,20 +28,20 @@ public class BuildUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
     public void Build()
     {
-        GameManager.instance.isPlacing = true;
+        gameManager.building.isPlacing = true;
         Debug.Log("Setting wall name to " + wallName);
-        GameManager.instance.SetWallName = "/" + wallName + "/";
-        GameManager.instance.buildType = buildType;
+        gameManager.building.SetWallName = "/" + wallName + "/";
+        gameManager.building.buildType = buildType;
     }
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        GameManager.instance.isHoverUI = true;
+        gameManager.building.isHoverUI = true;
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        GameManager.instance.isHoverUI = false;
+        gameManager.building.isHoverUI = false;
     }
 }
 

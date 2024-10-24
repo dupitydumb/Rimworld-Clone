@@ -8,10 +8,11 @@ public class Tree : MonoBehaviour, IInteractable, ISelectable
     public float cutTime;
     public Pawns worker;
 
+    private GameManager gameManager;
     // Start is called before the first frame update
     void Start()
     {
-        
+        gameManager = GameManager.instance;
     }
 
     // Update is called once per frame
@@ -39,7 +40,7 @@ public class Tree : MonoBehaviour, IInteractable, ISelectable
 
     public void Select()
     {
-        GameManager.instance.AddTask(gameObject);
+        gameManager.AddTask(gameObject);
         Debug.Log("Selected");
     }
 
@@ -84,8 +85,8 @@ public class Tree : MonoBehaviour, IInteractable, ISelectable
                 //Disable the collider
                 GetComponent<BoxCollider2D>().enabled = false;
                 //Update the graph
-                GameManager.instance.UpdateGraphNearObject(transform.position);
-                GameManager.instance.constructionToDo.Remove(gameObject);
+                gameManager.building.UpdateGraphNearObject(transform.position);
+                gameManager.constructionToDo.Remove(gameObject);
                 Destroy(gameObject);
             }
         }
