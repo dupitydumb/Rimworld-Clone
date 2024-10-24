@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class Floor : MonoBehaviour, IInteractable
+public class Floor : BuildingObject, IInteractable
 {
     public Pawns worker;
     public bool isComplete = false;
@@ -8,6 +8,10 @@ public class Floor : MonoBehaviour, IInteractable
     public int resourceAmount;
     private Color32 originalColor;
     public float constructionTime = 5f;
+
+    public GameObject floorPrefab;
+    public GameObject floorPreviewPrefab;
+    private GameObject currentPreview;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -32,6 +36,23 @@ public class Floor : MonoBehaviour, IInteractable
         }
     }
 
+    public override void Place(Vector3Int gridPosition, Grid grid, GameManager gameManager)
+    {
+        Vector3 worldPos = grid.GetCellCenterWorld(gridPosition);
+        GameObject floor = Instantiate(floorPrefab, worldPos, Quaternion.identity);
+        GridPosition = gridPosition;
+        gameManager.constructionToDo.Add(floor);
+    }
+
+    public override void ShowPreview(Vector3Int gridPosition, Grid grid)
+    {
+        if (currentPreview != null)
+        {
+            Destroy(currentPreview);
+        }
+        Vector3 worldPos = grid.GetCellCenterWorld(gridPosition);
+        currentPreview = Instantiate(floorPreviewPrefab, worldPos, Quaternion.identity);
+    }
     bool isVfxSpawned = false;
     public void BuildFloor()
     {

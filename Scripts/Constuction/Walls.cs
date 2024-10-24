@@ -9,25 +9,59 @@ public enum ResourceType
     Stone,
     Iron
 }
-public class Walls : MonoBehaviour, IInteractable
+public class Walls : BuildingObject, IInteractable
 {
+    private Grid grid;
+    private Dictionary<int, string> wallVariantDict = new Dictionary<int, string>();
     public bool isComplete = false;
     public ResourceType resourceType;
     public int resourceAmount;
     private Color32 originalColor;
     public float updateRadius = 5f;
     public float constructionTime = 5f;
-
+    private HashSet<Vector3Int> wallPositions = new HashSet<Vector3Int>(); // HashSet to store wall positions
+    public GameObject wallPrefab;
+    public GameObject wallPreviewPrefab;
+    private GameObject currentPreview;
     public Pawns worker;
+
+    private Dictionary<Vector3Int, GameObject> objects = new Dictionary<Vector3Int, GameObject>();
     // Start is called before the first frame update
     void Start()
     {
+        grid = GameManager.instance.grid;
+        wallPositions = GameManager.instance.building.wallPositions;
+        objects = GameManager.instance.building.objects;
         // Store the original color
         originalColor = GetComponent<SpriteRenderer>().color;
         // Set collision to false
         GetComponent<BoxCollider2D>().enabled = false;
         // Set color to transparent. set the alpha only
         GetComponent<SpriteRenderer>().color = new Color32(originalColor.r, originalColor.g, originalColor.b, 100);
+
+        wallVariantDict.Add(0, "Wall 12");
+        wallVariantDict.Add(1, "Wall 13");
+        wallVariantDict.Add(2, "Wall 14");
+        wallVariantDict.Add(3, "Wall 15");
+        wallVariantDict.Add(4, "Wall 8");
+        wallVariantDict.Add(5, "Wall 9");
+        wallVariantDict.Add(6, "Wall 10");
+        wallVariantDict.Add(7, "Wall 11");
+        wallVariantDict.Add(8, "Wall 4");
+        wallVariantDict.Add(9, "Wall 5");
+        wallVariantDict.Add(10, "Wall 6");
+        wallVariantDict.Add(11, "Wall 7");
+        wallVariantDict.Add(12, "Wall 0");
+        wallVariantDict.Add(13, "Wall 1");
+        wallVariantDict.Add(14, "Wall 2");
+        wallVariantDict.Add(15, "Wall 3");
+
+        UpdateWallSprite(GridPosition);
+        UpdateWallSprite(GridPosition + Vector3Int.up);
+        UpdateWallSprite(GridPosition + Vector3Int.right);
+        UpdateWallSprite(GridPosition + Vector3Int.down);
+        UpdateWallSprite(GridPosition + Vector3Int.left);
+
     }
 
     // Update is called once per frame
@@ -42,6 +76,65 @@ public class Walls : MonoBehaviour, IInteractable
             }
         }
     }
+
+    public void UpdateWallSprite(Vector3Int gridPos)
+    {
+        if (objects.ContainsKey(gridPos))
+        {
+            string SetWallName = GameManager.instance.building.SetWallName;
+            int bitmask = GetWallBitmask(gridPos);
+            GameObject wall = objects[gridPos];
+            // Replace the game object with the new wall variant
+            GameObject newWall = Instantiate(Resources.Load("Prefabs/Wall" + SetWallName + wallVariantDict[bitmask]) as GameObject, grid.GetCellCenterWorld(gridPos), Quaternion.identity);
+            wall.GetComponent<SpriteRenderer>().sprite = newWall.GetComponent<SpriteRenderer>().sprite;
+            Destroy(newWall);
+        }
+    }
+
+    //Update construction to do list
+    int GetWallBitmask(Vector3Int gridPos)
+    {
+        int bitmask = 0;
+
+        // Check neighboring cells and set bits accordingly
+        if (IsWall(gridPos + Vector3Int.up)) bitmask |= 1;       // Top
+        if (IsWall(gridPos + Vector3Int.right)) bitmask |= 2;    // Right
+        if (IsWall(gridPos + Vector3Int.down)) bitmask |= 4;     // Bottom
+        if (IsWall(gridPos + Vector3Int.left)) bitmask |= 8;     // Left
+
+        return bitmask;
+    }
+
+        void OnDrawGizmos()
+    {
+        if (wallPositions != null)
+        {
+            foreach (var pos in wallPositions)
+            {
+                int bitmask = GetWallBitmask(pos);
+                Vector3 worldPos = grid.GetCellCenterWorld(pos);
+                UnityEditor.Handles.Label(worldPos, bitmask.ToString());
+            }
+        }
+    }
+    public override void Place(Vector3Int gridPosition, Grid grid, GameManager gameManager)
+    {
+        Vector3 worldPos = grid.GetCellCenterWorld(gridPosition);
+        GameObject wall = Instantiate(wallPrefab, worldPos, Quaternion.identity);
+        GridPosition = gridPosition;
+        gameManager.constructionToDo.Add(wall);
+    }
+
+    public override void ShowPreview(Vector3Int gridPosition, Grid grid)
+    {
+        if (currentPreview != null)
+        {
+            Destroy(currentPreview);
+        }
+        Vector3 worldPos = grid.GetCellCenterWorld(gridPosition);
+        currentPreview = Instantiate(wallPreviewPrefab, worldPos, Quaternion.identity);
+    }
+
     bool isVfxSpawned = false;
     public void BuildWall()
     {
@@ -68,6 +161,18 @@ public class Walls : MonoBehaviour, IInteractable
             // Update the graph near the wall
             UpdateGraphNearWall();
         }
+    }
+
+    bool IsWall(Vector3Int gridPos)
+    {
+        // Check if the HashSet contains the grid position
+        return wallPositions.Contains(gridPos);
+    }
+
+    bool IsFloor(Vector3Int gridPos)
+    {
+        // Check if the HashSet contains the grid position
+        return wallPositions.Contains(gridPos);
     }
     public void Interact(Pawns pawns)
     {
