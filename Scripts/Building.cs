@@ -20,7 +20,10 @@ public class Building : MonoBehaviour
     private Dictionary<Vector3Int, GameObject> objects = new Dictionary<Vector3Int, GameObject>(); // Dictionary to store wall GameObjects
 
     GameManager gameManager;
-
+    private Vector3Int startGridPos;
+    private Vector3Int currentGridPos;
+    private bool isDragging = false;
+    private List<GameObject> currentPreview = new List<GameObject>();
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -47,123 +50,103 @@ public class Building : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.P))
+        if (Input.GetMouseButtonDown(0)) // Left Mouse Button
         {
-            isPlacing = !isPlacing;
-        }
-        if (!isPlacing)
-        {
-            toPlace.SetActive(false);
-            return;
+            isDragging = true;
+            startGridPos = GetGridPositionFromMouse();
+            currentGridPos = startGridPos;
+            ShowWallPreview(startGridPos);
         }
 
-        if (isPlacing)
+        if (Input.GetMouseButton(0) && isDragging)
         {
-            //Place the wall on mouse cursor
-            toPlace.SetActive(true);
-            Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            mousePos.z = 0;
-            Vector3Int gridPos = grid.WorldToCell(mousePos);
-            Vector3 finalPos = grid.GetCellCenterWorld(gridPos);
-            toPlace.transform.position = finalPos;
-
-            //Check if the placement is valid
-            if (CheckValidPlacement(gridPos))
+            Vector3Int newGridPos = GetGridPositionFromMouse();
+            if (newGridPos != currentGridPos)
             {
-                placementHolder.spriteRenderer.color = Color.green;
-            }
-            else
-            {
-                placementHolder.spriteRenderer.color = Color.red;
+                currentGridPos = newGridPos;
+                ShowWallPreview(currentGridPos);
             }
         }
-        if (Input.GetMouseButtonDown(0) && !isHoverUI && placementHolder.isColliding == false)
-        {
-            //check if there is a wall at the position
 
-            Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            mousePos.z = 0;
-            Vector3Int gridPos = grid.WorldToCell(mousePos);
-            Vector3 finalPos = grid.GetCellCenterWorld(gridPos);
-
-            if (IsWall(gridPos))
-            {
-                // Remove the wall if it already exists
-                RemoveWall(gridPos);
-            }
-            else if (CheckValidPlacement(gridPos))
-            {
-                // Switch between build types
-                switch (buildType)
-                {
-                    case BuildType.Wall:
-                        PlaceWall(gridPos, finalPos, SetWallName);
-                        break;
-                    case BuildType.Zone:
-                        PlaceFloor(gridPos, finalPos, SetWallName);
-                        break;
-                    case BuildType.Floor:
-                        PlaceFloor(gridPos, finalPos, SetWallName);
-                        break;
-                }
-            }
-        }
-        if (Input.GetMouseButtonDown(1))
+        if (Input.GetMouseButtonUp(0) && isDragging)
         {
-            isPlacing = false;
+            isDragging = false;
+            PlaceWalls(startGridPos, currentGridPos);
+            foreach (GameObject preview in currentPreview)
+            {
+                Destroy(preview);
+            }
         }
     }
 
-
-    bool CheckValidPlacement(Vector3Int gridPos)
+    Vector3Int GetGridPositionFromMouse()
     {
-        // Check if the position is not onto another wall
-        if (IsWall(gridPos) && !placementHolder.isColliding)
-        {
-            return false;
-        }
-        if (placementHolder.isColliding)
-        {
-            return false;
-        }
-
-        // Check if the position is not occupied by another wall
-        return !IsWall(gridPos);
+        Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        return grid.WorldToCell(mouseWorldPos);
     }
-    void PlaceWall(Vector3Int gridPos, Vector3 finalPos, string wallName)
+
+    void ShowWallPreview(Vector3Int gridPos)
     {
-        // Determine the facing condition using bitmasking
+        Vector3 worldPos = grid.GetCellCenterWorld(gridPos);
         int bitmask = GetWallBitmask(gridPos);
-        //Wall Resources Folder
-        GameObject wallPrefab = Resources.Load("Prefabs/Wall" + wallName + wallVariantDict[bitmask]) as GameObject;
-        currentPreviewPrefab = wallPrefab;
-        //Debug path
-        Debug.Log("Prefabs/Wall" + wallName + wallVariantDict[bitmask]);
-        GameObject wall = Instantiate(wallPrefab, finalPos, Quaternion.identity);
-        wallPositions.Add(gridPos);
-        objects.Add(gridPos, wall);
-        gameManager.AddTask(wall);
-        // Update the bitmask and sprite of the new wall and its neighbors
-        UpdateWallSprite(gridPos);
+        GameObject preview = Instantiate(Resources.Load("Prefabs/Wall" + SetWallName + wallVariantDict[bitmask]) as GameObject, worldPos, Quaternion.identity);
+        // Set prevew z position to -1 so it is rendered behind other objects
+        preview.transform.position = new Vector3(preview.transform.position.x, preview.transform.position.y, 3);
+        currentPreview.Add(preview);
+
         UpdateWallSprite(gridPos + Vector3Int.up);
         UpdateWallSprite(gridPos + Vector3Int.right);
         UpdateWallSprite(gridPos + Vector3Int.down);
         UpdateWallSprite(gridPos + Vector3Int.left);
     }
-    public GameObject currentPreviewPrefab;
-    void PlaceFloor(Vector3Int gridPos, Vector3 finalPos, string floorName)
+
+    void PlaceWalls(Vector3Int start, Vector3Int end)
     {
-        // Delete the / at the end of the string
-        floorName = floorName.Substring(0, floorName.Length - 1);
-        GameObject floorPrefab = Resources.Load("Prefabs/Floor" + floorName) as GameObject;
-        currentPreviewPrefab = floorPrefab;
-        Debug.Log("Prefabs/Floor" + floorName);
-        GameObject floor = Instantiate(floorPrefab, finalPos, Quaternion.identity);
-        floorPositions.Add(gridPos);
-        objects.Add(gridPos, floor);
-        gameManager.constructionToDo.Add(floor);
+        List<Vector3Int> positions = GetGridPositionsBetween(start, end);
+        foreach (Vector3Int pos in positions)
+        {
+            if (!wallPositions.Contains(pos))
+            {
+                Vector3 worldPos = grid.GetCellCenterWorld(pos);
+                //Get bitmask of the wall
+                int bitmask = GetWallBitmask(pos);
+                GameObject wall = Instantiate(Resources.Load("Prefabs/Wall" + SetWallName + wallVariantDict[bitmask]) as GameObject, worldPos, Quaternion.identity);
+                //Debug but warning
+                Debug.LogWarning("Wall bitmask: " + bitmask + " Wall name: " + wallVariantDict[bitmask]);
+                wallPositions.Add(pos);
+                objects.Add(pos, wall);
+                UpdateWallSprite(pos);
+                gameManager.constructionToDo.Add(wall);
+
+                //Update the graph
+                UpdateGraphNearObject(worldPos);
+
+                //Update bitmask
+                UpdateWallSprite(pos + Vector3Int.up);
+                UpdateWallSprite(pos + Vector3Int.right);
+                UpdateWallSprite(pos + Vector3Int.down);
+                UpdateWallSprite(pos + Vector3Int.left);
+                UpdateWallSprite(pos);
+            }
+        }
+    }
+
+    List<Vector3Int> GetGridPositionsBetween(Vector3Int start, Vector3Int end)
+    {
+        List<Vector3Int> positions = new List<Vector3Int>();
+        int xDir = end.x > start.x ? 1 : -1;
+        int yDir = end.y > start.y ? 1 : -1;
+
+        for (int x = start.x; x != end.x + xDir; x += xDir)
+        {
+            for (int y = start.y; y != end.y + yDir; y += yDir)
+            {
+                positions.Add(new Vector3Int(x, y, 0));
+            }
+        }
+        return positions;
     }
 
     void RemoveWall(Vector3Int gridPos)
@@ -233,8 +216,6 @@ public class Building : MonoBehaviour
             {
                 int bitmask = GetWallBitmask(pos);
                 Vector3 worldPos = grid.GetCellCenterWorld(pos);
-                Gizmos.color = Color.red;
-                Gizmos.DrawSphere(worldPos, 0.1f);
                 UnityEditor.Handles.Label(worldPos, bitmask.ToString());
             }
         }
