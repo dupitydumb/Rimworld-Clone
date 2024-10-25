@@ -4,6 +4,8 @@ public class Deer : Animal
 {
     public Deer(string name, int age) : base(name, age)
     {
+        name = "Deer";
+        age = 0;
     }
 
     public override void Speak()

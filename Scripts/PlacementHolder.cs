@@ -11,7 +11,7 @@ public class PlacementHolder : MonoBehaviour
     public SpriteRenderer spriteRenderer;
     public Event onBuildChange;
     
-    
+    private Grid grid;
     void Awake()
     {
         if (instance == null)
@@ -30,10 +30,33 @@ public class PlacementHolder : MonoBehaviour
     {
         boxCollider = GetComponent<BoxCollider2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
+        grid = GameManager.instance.grid;
     }
 
     void Update()
     {
+        if (GameManager.instance.building.isPlacing)
+        {
+
+            Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            mousePos.z = 0;
+            Vector3Int gridPos = grid.WorldToCell(mousePos);
+            Vector3 finalPos = grid.GetCellCenterWorld(gridPos);
+            this.transform.position = finalPos;
+
+            if (isColliding)
+            {
+                spriteRenderer.color = new Color32(255, 0, 0, 100);
+            }
+            else
+            {
+                spriteRenderer.color = new Color32(0, 255, 0, 100);
+            }
+        }
+        else
+        {
+            spriteRenderer.color = new Color32(255, 255, 255, 0);
+        }
 
     }
     // Update the preview of the placement holder

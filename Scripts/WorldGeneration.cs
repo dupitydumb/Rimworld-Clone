@@ -56,6 +56,7 @@ public class WorldGeneration : MonoBehaviour
         GenerateTrees();
         yield return new WaitForSeconds(0.1f);
         GenerateGrass();
+        isGenerating = false;
         AstarPath.active.Scan();
     }
 
@@ -79,7 +80,6 @@ public class WorldGeneration : MonoBehaviour
                 tilemap.Add(gridPosition, tile);
             }
         }
-        
     }
 
 

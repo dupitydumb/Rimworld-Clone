@@ -11,6 +11,10 @@ public class SelectionManager : MonoBehaviour
     public Vector2 mouseOffset;
     void Update()
     {
+        if (GameManager.instance.building.isPlacing)
+        {
+            return;
+        }
         if (Input.GetMouseButtonDown(0)) // Left Mouse Button
         {
             RectTransformUtility.ScreenPointToLocalPointInRectangle(

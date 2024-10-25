@@ -18,7 +18,8 @@ public class Pawns : MonoBehaviour, ISelectable
 
     private bool isOnAtask = false;
     public List<InventoryItem> stuffCarried = new List<InventoryItem>();
-    public List<Transform> destinations = new List<Transform>();
+
+    public GameObject task;
     // Start is called before the first frame update
     void Start()
     {
@@ -40,6 +41,14 @@ public class Pawns : MonoBehaviour, ISelectable
             return;
         }
         
+        if (coorObject != null)
+        {
+            if (Vector2.Distance(transform.position, coorObject.transform.position) < 0.5f)
+            {
+                Destroy(coorObject);
+            }
+        }
+    
         // Check if the pawn is stationary
         if (Vector2.Distance(transform.position, lastPosition) < 0.01f)
         {
@@ -67,7 +76,7 @@ public class Pawns : MonoBehaviour, ISelectable
         {
             return;
         }
-        if (GameManager.instance.constructionToDo.Count > 0)
+        if (GameManager.instance.constructionToDo.Count > 0 && task == null)
         {
             GetTask();
         }
@@ -78,8 +87,7 @@ public class Pawns : MonoBehaviour, ISelectable
     }
     void RoamTheWorld()
     {
-        
-
+        BoundsInt bounds = GameManager.instance.bounds;
     }
     private Vector2 lastPosition;
     private float stationaryTime = 0f;
@@ -94,68 +102,71 @@ public class Pawns : MonoBehaviour, ISelectable
         // If the pawn is not moving for a while, add a random destination nearby
         if (isNotMovingForAWhile())
         {
-            if (GameManager.instance.constructionToDo.Count > 0)
-            {
-                //randomize the task
-                AID.target = GameManager.instance.constructionToDo[Random.Range(0, GameManager.instance.constructionToDo.Count)].transform;
-                return;
-            }
-            else
-            {
-                Debug.Log("Pawn is stuck");
-                tempPath = true;
-                Vector2 randomPosition = new Vector2(Random.Range(-10, 10), Random.Range(-5, 5));
-                GameObject path = Instantiate(pathprefab, randomPosition, Quaternion.identity);
-                tempPathObject = path;
-                AID.target = path.transform;
-                destination = path.transform.position;
-                stationaryTime = 0f; // Reset the stationary timer
-            }
+            
             
         }
 
         if (tempPath)
         {
-            if (Vector2.Distance(transform.position, destination) < 0.1f)
-            {
-                Destroy(tempPathObject); // Destroy the temporary path object
-                tempPath = false;
-                if (destinations.Count > 0)
-                {
-                    Destroy(destinations[0].gameObject); // Destroy the temporary path object
-                    destinations.RemoveAt(0);
-
-                    //loop through the destinations remove nulls
-                    for (int i = 0; i < destinations.Count; i++)
-                    {
-                        if (destinations[i] == null)
-                        {
-                            destinations.RemoveAt(i);
-                        }
-                    }
-                }
-            }
+            
         }
     }
     void GetTask()
     {
-        if (GameManager.instance.constructionToDo.Count > 0)
+        //Get task without pawns assigned
+        foreach (GameObject task in GameManager.instance.constructionToDo)
         {
-            //Get the first task
-            GameObject task = GameManager.instance.constructionToDo[0];
-            //Set the destination
-            AID.target = task.transform;
-            destination = task.transform.position;
-            // Call The Interact Method
-
-            if (Vector2.Distance(transform.position, destination) < 0.5f)
+            //Check if the task is not assigned to any pawn
+            if (task.GetComponent<IInteractable>().GetWorker() != null)
             {
-                IInteractable interactable = task.GetComponent<IInteractable>();
-                interactable.Interact(this);
+                continue;
             }
-            // IInteractable interactable = task.GetComponent<IInteractable>();
-            // interactable.Interact(this);
+            if (task.GetComponent<IInteractable>().GetWorker() == null)
+            {
+                //Set the destination
+                AID.target = task.transform;
+                destination = task.transform.position;
+                // Call The Interact Method
+                if (Vector2.Distance(transform.position, destination) < 0.5f)
+                {
+                    IInteractable interactable = task.GetComponent<IInteractable>();
+                    interactable.Interact(this);
+                }
+                return;
+            }
         }
+
+
+        // if (GameManager.instance.constructionToDo.Count > 0)
+        // {
+        //     //Get the first task
+        //     GameObject task = GameManager.instance.constructionToDo[0];
+        //     //Set the destination
+        //     AID.target = task.transform;
+        //     destination = task.transform.position;
+        //     // Call The Interact Method
+
+        //     if (Vector2.Distance(transform.position, destination) < 0.5f)
+        //     {
+        //         IInteractable interactable = task.GetComponent<IInteractable>();
+        //         interactable.Interact(this);
+        //     }
+        //     // IInteractable interactable = task.GetComponent<IInteractable>();
+        //     // interactable.Interact(this);
+        // }
+    }
+
+    private GameObject coorObject;
+    public void SetDestination(Vector2 coordinates)
+    {
+        if (coorObject != null)
+        {
+            Destroy(coorObject);
+        }
+        //Set the destination of the pawn
+        coorObject = Instantiate(Resources.Load("Prefabs/Target", typeof(GameObject))) as GameObject;
+        coorObject.transform.position = coordinates;
+        AID.target = coorObject.transform;
     }
     void Move(Vector2 coordinates)
     {
@@ -220,19 +231,32 @@ public class Pawns : MonoBehaviour, ISelectable
     }
 
 
+    public void HighLight()
+    {
+        // Change the color of the pawn when highlighted
+        head.GetComponent<SpriteRenderer>().color = Color.yellow;
+        body.GetComponent<SpriteRenderer>().color = Color.yellow;
+    }
 
+    public void DeHighLight()
+    {
+        // Change the color of the pawn when dehighlighted
+        head.GetComponent<SpriteRenderer>().color = Color.white;
+        body.GetComponent<SpriteRenderer>().color = Color.white;
+    }
     public void Select()
     {
         // Change the color of the pawn when selected
-        head.GetComponent<SpriteRenderer>().color = Color.red;
-        body.GetComponent<SpriteRenderer>().color = Color.red;
+        GameManager.instance.pawnSelectionManager.pawns.Add(this.gameObject);
+        GameObject highlighted = transform.Find("Highlight").gameObject;
+        highlighted.SetActive(true);
     }
 
     public void Deselect()
     {
-        // Change the color of the pawn when deselected
-        head.GetComponent<SpriteRenderer>().color = Color.white;
-        body.GetComponent<SpriteRenderer>().color = Color.white;
+        GameManager.instance.pawnSelectionManager.pawns.Remove(this.gameObject);
+        GameObject highlighted = transform.Find("Highlight").gameObject;
+        highlighted.SetActive(false);
     }
 
     public Vector3 GetPosition()

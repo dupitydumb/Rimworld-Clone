@@ -67,6 +67,11 @@ public class Zone : MonoBehaviour, IInteractable
         }
     }
 
+    Pawns IInteractable.GetWorker()
+    {
+        return workers[0];
+    }
+
     public void CancelInteraction()
     {
         workers.Clear();

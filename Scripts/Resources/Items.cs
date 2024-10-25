@@ -83,6 +83,11 @@ public class Items : MonoBehaviour, IInteractable
         
     }
 
+    Pawns IInteractable.GetWorker()
+    {
+        return worker;
+    }
+
     
 
     public void HaulToZone(GameObject zone, Pawns pawns)

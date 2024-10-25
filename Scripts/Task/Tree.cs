@@ -66,7 +66,7 @@ public class Tree : MonoBehaviour, IInteractable, ISelectable
         if (worker == null)
         {
             worker = pawns;
-            worker.destinations.Add(transform);
+            worker.task = this.gameObject;
         }
     }
 
@@ -91,6 +91,11 @@ public class Tree : MonoBehaviour, IInteractable, ISelectable
             }
         }
         Debug.Log("Cutting down tree");
+    }
+
+    Pawns IInteractable.GetWorker()
+    {
+        return worker;
     }
 
 }

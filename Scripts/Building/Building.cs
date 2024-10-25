@@ -34,38 +34,72 @@ public class Building : MonoBehaviour
     }
 
     // Update is called once per frame
-     void Update()
+    void Update()
     {
-        if (Input.GetMouseButtonDown(0)) // Left Mouse Button
+        if (!isHoverUI && SetWallName != null && isPlacing)
         {
-            isDragging = true;
-            startGridPos = GetGridPositionFromMouse();
-            currentGridPos = startGridPos;
-            ShowWallPreview(startGridPos);
-        }
-
-        if (Input.GetMouseButton(0) && isDragging)
-        {
-            Vector3Int newGridPos = GetGridPositionFromMouse();
-            if (newGridPos != currentGridPos)
+            placementHolder.gameObject.SetActive(true);
+            if (Input.GetMouseButtonDown(0)) // Left Mouse Button
             {
-                currentGridPos = newGridPos;
-                ShowWallPreview(currentGridPos);
+                isDragging = true;
+                startGridPos = GetGridPositionFromMouse();
+                currentGridPos = startGridPos;
+    
+                switch (buildType)
+                {
+                    case BuildType.Wall:
+                        ShowWallPreview(currentGridPos);
+                        break;
+                    case BuildType.Floor:
+                        ShowFloorPreview(startGridPos, currentGridPos);
+                        break;
+                }
+    
+            }
+    
+            if (Input.GetMouseButton(0) && isDragging)
+            {
+                Vector3Int newGridPos = GetGridPositionFromMouse();
+                if (newGridPos != currentGridPos)
+                {
+                    currentGridPos = newGridPos;
+                    switch (buildType)
+                    {
+                        case BuildType.Wall:
+                            ShowWallPreview(currentGridPos);
+                            break;
+                        case BuildType.Floor:
+                            ShowFloorPreview(startGridPos, currentGridPos);
+                            break;
+                    }
+                }
+            }
+    
+            if (Input.GetMouseButtonUp(0) && isDragging)
+            {
+                isDragging = false;
+                switch (buildType)
+                {
+                    case BuildType.Wall:
+                        PlaceWalls(startGridPos, currentGridPos);
+                        break;
+                    case BuildType.Floor:
+                        PlaceFloor(startGridPos, currentGridPos);
+                        break;
+                }
+                foreach (GameObject preview in currentPreview)
+                {
+                    Destroy(preview);
+                }
             }
         }
-
-        if (Input.GetMouseButtonUp(0) && isDragging)
+        else
         {
-            isDragging = false;
-            PlaceWalls(startGridPos, currentGridPos);
-            foreach (GameObject preview in currentPreview)
-            {
-                Destroy(preview);
-            }
+            placementHolder.gameObject.SetActive(false);
         }
     }
 
-    Vector3Int GetGridPositionFromMouse()
+    public Vector3Int GetGridPositionFromMouse()
     {
         Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         return grid.WorldToCell(mouseWorldPos);
@@ -74,6 +108,7 @@ public class Building : MonoBehaviour
     void ShowWallPreview(Vector3Int gridPos)
     {
         Vector3 worldPos = grid.GetCellCenterWorld(gridPos);
+        int bitmask = 0;
         GameObject preview = Instantiate(Resources.Load("Prefabs/Wall" + SetWallName + "Wall 0") as GameObject, worldPos, Quaternion.identity);
         // Set prevew z position to -1 so it is rendered behind other objects
         preview.transform.position = new Vector3(preview.transform.position.x, preview.transform.position.y, 3);
@@ -88,6 +123,27 @@ public class Building : MonoBehaviour
         
     }
 
+    void ShowFloorPreview(Vector3Int start, Vector3Int end)
+    {
+        List<Vector3Int> positions = GetGridPositionsBetween(start, end);
+        foreach (Vector3Int pos in positions)
+        {
+            if (!floorPositions.Contains(pos))
+            {
+                Vector3 worldPos = grid.GetCellCenterWorld(pos);
+                //Get bitmask of the wall
+                //Remove the / at the end of the name
+                GameObject floor = Instantiate(Resources.Load("Prefabs/Floor" + SetWallName.Substring(0, SetWallName.Length - 1)) as GameObject, worldPos, Quaternion.identity);
+                //Debug but warning
+                floorPositions.Add(pos);
+                objects.Add(pos, floor);
+                gameManager.constructionToDo.Add(floor);
+                floor.GetComponent<Floor>().GridPosition = pos;
+                //Update the graph
+
+            }
+        }
+    }
     void PlaceWalls(Vector3Int start, Vector3Int end)
     {
         List<Vector3Int> positions = GetGridPositionsBetween(start, end);
@@ -103,6 +159,31 @@ public class Building : MonoBehaviour
                 objects.Add(pos, wall);
                 gameManager.constructionToDo.Add(wall);
                 wall.GetComponent<Walls>().GridPosition = pos;
+                //Update the graph
+                UpdateGraphNearObject(worldPos);
+
+            }
+        }
+    }
+    
+    // Place floor
+
+    void PlaceFloor(Vector3Int start, Vector3Int end)
+    {
+        List<Vector3Int> positions = GetGridPositionsBetween(start, end);
+        foreach (Vector3Int pos in positions)
+        {
+            if (!floorPositions.Contains(pos))
+            {
+                Vector3 worldPos = grid.GetCellCenterWorld(pos);
+                //Get bitmask of the wall
+                //Remove the / at the end of the name
+                GameObject floor = Instantiate(Resources.Load("Prefabs/Floor" + SetWallName.Substring(0, SetWallName.Length - 1)) as GameObject, worldPos, Quaternion.identity);
+                //Debug but warning
+                floorPositions.Add(pos);
+                objects.Add(pos, floor);
+                gameManager.constructionToDo.Add(floor);
+                floor.GetComponent<Floor>().GridPosition = pos;
                 //Update the graph
                 UpdateGraphNearObject(worldPos);
 

@@ -77,8 +77,11 @@ public class Floor : BuildingObject, IInteractable
 
     public void Interact(Pawns pawns)
     {
-        worker = pawns;
-        Debug.Log("Interacting with floor");
+        if (worker == null)
+        {
+            worker = pawns;
+            worker.task = this.gameObject;
+        }
     }
 
     public void CancelInteraction()
@@ -88,5 +91,10 @@ public class Floor : BuildingObject, IInteractable
     public void Hover()
     {
         Debug.Log("Hovering over floor");
+    }
+
+    Pawns IInteractable.GetWorker()
+    {
+        return worker;
     }
 }

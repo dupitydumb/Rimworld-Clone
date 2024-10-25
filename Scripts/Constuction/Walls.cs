@@ -79,6 +79,8 @@ public class Walls : BuildingObject, IInteractable
 
     public void UpdateWallSprite(Vector3Int gridPos)
     {
+        // if not wall, return
+        if (!IsWall(gridPos)) return;
         if (objects.ContainsKey(gridPos))
         {
             string SetWallName = GameManager.instance.building.SetWallName;
@@ -105,7 +107,7 @@ public class Walls : BuildingObject, IInteractable
         return bitmask;
     }
 
-        void OnDrawGizmos()
+    void OnDrawGizmos()
     {
         if (wallPositions != null)
         {
@@ -153,6 +155,7 @@ public class Walls : BuildingObject, IInteractable
             worker.transform.position = safePosition;
 
             // Enable collision
+            worker.task = null;
             worker = null;
             GetComponent<BoxCollider2D>().enabled = true;
             // Set color to opaque
@@ -176,9 +179,14 @@ public class Walls : BuildingObject, IInteractable
     }
     public void Interact(Pawns pawns)
     {
+        if (worker != null)
+        {
+            return;
+        }
         if (worker == null)
         {
             worker = pawns;
+            worker.task = this.gameObject;
         }
     }
 
@@ -187,7 +195,6 @@ public class Walls : BuildingObject, IInteractable
     {
         if (worker != null)
         {
-            worker.destinations.Remove(transform);
             worker = null;
             GameManager.instance.constructionToDo.Remove(gameObject);
         }
@@ -236,6 +243,11 @@ public class Walls : BuildingObject, IInteractable
             }
         }
         return false;
+    }
+
+    Pawns IInteractable.GetWorker()
+    {
+        return worker;
     }
 
 }

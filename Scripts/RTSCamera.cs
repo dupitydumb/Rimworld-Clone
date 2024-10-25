@@ -10,11 +10,14 @@ public class RTSCamera : MonoBehaviour
     public float minSize = 4f; // Minimum size of the camera
     public float maxSize = 12f; // Maximum size of the camera
 
-    public float minX = -50f;
-    public float maxX = 50f;
-    public float minY = -50f;
-    public float maxY = 50f;
+    private BoundsInt bounds; // Bounds of the camera movement
 
+
+    void Start()
+    {
+        // Set the bounds of the camera movement
+        bounds = GameManager.instance.bounds;
+    }
     void Update()
     {
         Vector3 pos = transform.position;
@@ -37,12 +40,21 @@ public class RTSCamera : MonoBehaviour
             pos.x -= panSpeed * Time.deltaTime;
         }
 
+        //if middle mouse button is pressed
+        if (Input.GetMouseButton(2))
+        {
+            //Get the direction of the mouse movement
+            Vector3 move = new Vector3(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"), 0);
+            //Move the camera
+            pos -= move * panSpeed * Time.deltaTime;
+        }
+
         // Call the PanAtEdge method to handle panning at screen edges
         // PanAtEdge(ref pos);
 
-        // Clamp the camera position within the defined boundaries
-        pos.x = Mathf.Clamp(pos.x, minX, maxX);
-        pos.y = Mathf.Clamp(pos.y, minY, maxY);
+        // make sure the camera stays within the bounds
+        pos.x = Mathf.Clamp(pos.x, bounds.min.x, bounds.max.x);
+        pos.y = Mathf.Clamp(pos.y, bounds.min.y, bounds.max.y);
 
         // Zooming with mouse scroll wheel
         float scroll = Input.GetAxis("Mouse ScrollWheel");

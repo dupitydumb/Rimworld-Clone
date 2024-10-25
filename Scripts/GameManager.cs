@@ -12,12 +12,13 @@ public class GameManager : MonoBehaviour
     public Grid grid;
     public List<GameObject> zoneList;
     public List<GameObject> constructionToDo; 
-
     public Building building;
     public Inventory inventory;
-
+    public PawnSelectionManager pawnSelectionManager;
     //Event to update when the build type changes
     public UnityAction BuildChangeEvent;
+
+    public BoundsInt bounds;
     private void Awake()
     {
         if (instance == null)
@@ -32,12 +33,25 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         building = GetComponent<Building>();
-        inventory = GetComponent<Inventory>();        
+        inventory = GetComponent<Inventory>();     
+        pawnSelectionManager = GetComponent<PawnSelectionManager>();   
     }
 
     void Update()
     {
-        
+        //Game Speed
+        if (Input.GetKeyDown(KeyCode.Alpha1))
+        {
+            Time.timeScale = 1;
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha2))
+        {
+            Time.timeScale = 2;
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha3))
+        {
+            Time.timeScale = 3;
+        }
     }
 
 
@@ -100,8 +114,12 @@ public class GameManager : MonoBehaviour
         //Set parent to the tree
         buildSfx.transform.SetParent(target.transform);
         Destroy(buildSfx, time);
-
-
     }
 
+
+    void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireCube(bounds.center, bounds.size);
+    }
 }
