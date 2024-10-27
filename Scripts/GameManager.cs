@@ -8,6 +8,8 @@ using UnityEngine.Events;
 
 public class GameManager : MonoBehaviour
 {
+    public ResourcesManager resourcesManager;
+    public TaskManager taskManager;
     public static GameManager instance;
     public Grid grid;
     public List<GameObject> zoneList;
@@ -34,7 +36,9 @@ public class GameManager : MonoBehaviour
     {
         building = GetComponent<Building>();
         inventory = GetComponent<Inventory>();     
-        pawnSelectionManager = GetComponent<PawnSelectionManager>();   
+        pawnSelectionManager = GetComponent<PawnSelectionManager>();
+        taskManager = GetComponentInChildren<TaskManager>();
+        resourcesManager = GetComponentInChildren<ResourcesManager>();
     }
 
     void Update()
@@ -69,23 +73,22 @@ public class GameManager : MonoBehaviour
 
     public void RemoveTask(GameObject task)
     {
-        constructionToDo.Remove(task);
-        GameObject marker = task.transform.Find("Marker").gameObject;
-        if (marker != null)
+        taskManager.RemoveTask(task);
+
+        //if there is marker remove it
+        if (task.transform.Find("Marker") != null)
         {
-            Destroy(marker);
-            return;
+            Destroy(task.transform.Find("Marker").gameObject);
         }
-        
     }
     public void AddTask(GameObject task)
     {
-        if (constructionToDo.Contains(task))
-        {
-            return;
-        }
+        //Create new task
+        Task newtask = new Task(taskType: TaskType.Build, targetPosition: task.transform.position, targetObject: task);
+        //Add task to the task manager
+        taskManager.AddTask(newtask);
+
         SpawnMarker(task);
-        constructionToDo.Add(task);
     }
 
     public void SpawnMarker(GameObject target)

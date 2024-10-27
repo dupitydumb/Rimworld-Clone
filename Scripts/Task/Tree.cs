@@ -7,7 +7,9 @@ public class Tree : MonoBehaviour, IInteractable, ISelectable
 
     public float cutTime;
     public Pawns worker;
-
+    
+    public bool isCompleted = false;
+    public TaskType taskType;
     private GameManager gameManager;
     // Start is called before the first frame update
     void Start()
@@ -63,11 +65,7 @@ public class Tree : MonoBehaviour, IInteractable, ISelectable
 
     public void Interact(Pawns pawns)
     {
-        if (worker == null)
-        {
-            worker = pawns;
-            worker.task = this.gameObject;
-        }
+        worker = pawns;
     }
 
     public void CancelInteraction()
@@ -86,7 +84,8 @@ public class Tree : MonoBehaviour, IInteractable, ISelectable
                 GetComponent<BoxCollider2D>().enabled = false;
                 //Update the graph
                 gameManager.building.UpdateGraphNearObject(transform.position);
-                gameManager.constructionToDo.Remove(gameObject);
+                gameManager.RemoveTask(gameObject);
+                isCompleted = true;
                 Destroy(gameObject);
             }
         }

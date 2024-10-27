@@ -11,11 +11,10 @@ public enum ResourceType
 }
 public class Walls : BuildingObject, IInteractable
 {
+    public TaskType taskType;
     private Grid grid;
     private Dictionary<int, string> wallVariantDict = new Dictionary<int, string>();
     public bool isComplete = false;
-    public ResourceType resourceType;
-    public int resourceAmount;
     private Color32 originalColor;
     public float updateRadius = 5f;
     public float constructionTime = 5f;
@@ -23,7 +22,6 @@ public class Walls : BuildingObject, IInteractable
     public GameObject wallPrefab;
     public GameObject wallPreviewPrefab;
     private GameObject currentPreview;
-    public Pawns worker;
 
     private Dictionary<Vector3Int, GameObject> objects = new Dictionary<Vector3Int, GameObject>();
     // Start is called before the first frame update
@@ -67,16 +65,76 @@ public class Walls : BuildingObject, IInteractable
     // Update is called once per frame
     void Update()
     {
-        if (worker != null)
+        if (resourceAmount >= requiredResources && worker != null)
         {
-            // Check if the worker is close to the wall
             if (Vector2.Distance(worker.transform.position, transform.position) < 0.8f)
             {
                 BuildWall();
+                Debug.LogWarning("Building wall");
+            }
+        }
+        else if (worker != null)
+        {
+            //Try add resource from pawn stuff carried
+            bool isFound = false;
+            foreach (InventoryItem item in worker.stuffCarried)
+            {
+                if (item.itemName == resourceType.ToString())
+                {
+                    //Add resources until required resources are met
+                    if (resourceAmount < requiredResources)
+                    {
+                        resourceAmount += item.amount;
+                        isFound = true;
+                    }
+
+                    //Remove number of resources from pawn
+                    foreach (InventoryItem stuff in worker.stuffCarried)
+                    {
+                        if (stuff.itemName == resourceType.ToString())
+                        {
+                            stuff.amount -= item.amount;
+                            if (stuff.amount <= 0)
+                            {
+                                worker.stuffCarried.Remove(stuff);
+                            }
+                            break;
+                        }
+                    }
+                    break;
+                }
+                
+            }
+            if (!isFound && !isResourcesAssigned)
+            {
+                if (GameManager.instance.resourcesManager.IsResoucesAvailable(resourceType))
+                {
+                    Debug.LogWarning("Resources available");
+                    worker.CurrentTask.targetObject = null;
+                    GameManager.instance.resourcesManager.AssignResourceTask(gameObject, resourceType);
+                    isResourcesAssigned = true;
+                }
+                else if (!isPending)
+                {
+                    Debug.LogWarning("No resources available");
+                    worker.CurrentTask.targetObject = null;
+                    worker = null;
+                    GameManager.instance.RemoveTask(gameObject);
+                    GameManager.instance.taskManager.pendingTasks.Add(new Task(TaskType.GatherResource, transform.position, gameObject));
+                    isResourcesAssigned = false;
+                    isPending = true;
+                }
+                Debug.LogWarning("$$No resources available$$");
+            }
+            else
+            {
+                isResourcesAssigned = false;
             }
         }
     }
-
+    bool isPending = false;
+    bool isResourcesAssigned = false;
+    
     public void UpdateWallSprite(Vector3Int gridPos)
     {
         // if not wall, return
@@ -124,7 +182,7 @@ public class Walls : BuildingObject, IInteractable
         Vector3 worldPos = grid.GetCellCenterWorld(gridPosition);
         GameObject wall = Instantiate(wallPrefab, worldPos, Quaternion.identity);
         GridPosition = gridPosition;
-        gameManager.constructionToDo.Add(wall);
+        gameManager.AddTask(wall);
     }
 
     public override void ShowPreview(Vector3Int gridPosition, Grid grid)
@@ -155,12 +213,14 @@ public class Walls : BuildingObject, IInteractable
             worker.transform.position = safePosition;
 
             // Enable collision
-            worker.task = null;
-            worker = null;
+   
             GetComponent<BoxCollider2D>().enabled = true;
             // Set color to opaque
             GetComponent<SpriteRenderer>().color = originalColor;
-            GameManager.instance.constructionToDo.Remove(gameObject);
+            isComplete = true;
+            GameManager.instance.RemoveTask(gameObject);
+            worker.CurrentTask.targetObject = null;
+            worker = null;
             // Update the graph near the wall
             UpdateGraphNearWall();
         }
@@ -179,15 +239,7 @@ public class Walls : BuildingObject, IInteractable
     }
     public void Interact(Pawns pawns)
     {
-        if (worker != null)
-        {
-            return;
-        }
-        if (worker == null)
-        {
-            worker = pawns;
-            worker.task = this.gameObject;
-        }
+        worker = pawns;
     }
 
 

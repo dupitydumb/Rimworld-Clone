@@ -2,6 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Pathfinding;
+using UnityEditor.Actions;
+using System;
+using UnityEditor.VersionControl;
 
 public class Pawns : MonoBehaviour, ISelectable
 {
@@ -14,12 +17,23 @@ public class Pawns : MonoBehaviour, ISelectable
     public float Speed = 1f;
     private Vector2 destination;
     public GameObject pathprefab;
-    AIDestinationSetter AID;
+    public AIDestinationSetter AID;
 
     private bool isOnAtask = false;
+    [SerializeField]
     public List<InventoryItem> stuffCarried = new List<InventoryItem>();
 
-    public GameObject task;
+    //Show in the inspector
+    [SerializeField]
+    private Task currentTask; // Backing field for CurrentTask
+
+    public Task CurrentTask
+    {
+        get { return currentTask; }
+        private set { currentTask = value; }
+    }
+
+    private TaskManager taskManager;
     // Start is called before the first frame update
     void Start()
     {
@@ -35,19 +49,23 @@ public class Pawns : MonoBehaviour, ISelectable
     // Update is called once per frame
     void Update()
     {
+        //Debug CurrentTask
+        if (CurrentTask != null)
+        {
+            Debug.LogWarning(CurrentTask.targetObject);
+        }
+        else
+        {
+            Debug.LogWarning("No task");
+        }
+
+
         //Roam the world
         if (WorldGeneration.instance.isGenerating == true)
         {
             return;
         }
-        
-        if (coorObject != null)
-        {
-            if (Vector2.Distance(transform.position, coorObject.transform.position) < 0.5f)
-            {
-                Destroy(coorObject);
-            }
-        }
+    
     
         // Check if the pawn is stationary
         if (Vector2.Distance(transform.position, lastPosition) < 0.01f)
@@ -76,14 +94,6 @@ public class Pawns : MonoBehaviour, ISelectable
         {
             return;
         }
-        if (GameManager.instance.constructionToDo.Count > 0 && task == null)
-        {
-            GetTask();
-        }
-        else
-        {
-            RoamTheWorld();
-        }
     }
     void RoamTheWorld()
     {
@@ -111,49 +121,77 @@ public class Pawns : MonoBehaviour, ISelectable
             
         }
     }
-    void GetTask()
+
+    public void AssignTask(Task task)
     {
-        //Get task without pawns assigned
-        foreach (GameObject task in GameManager.instance.constructionToDo)
+        if (task.targetObject == null)
         {
-            //Check if the task is not assigned to any pawn
-            if (task.GetComponent<IInteractable>().GetWorker() != null)
+            return;
+        }
+        CurrentTask = task;
+        ExecuteTask();
+        AID.target = task.targetObject.transform;
+    }
+
+    private void ExecuteTask()
+    {
+        if (CurrentTask != null)
+        {
+            switch (CurrentTask.taskType)
             {
-                continue;
-            }
-            if (task.GetComponent<IInteractable>().GetWorker() == null)
-            {
-                //Set the destination
-                AID.target = task.transform;
-                destination = task.transform.position;
-                // Call The Interact Method
-                if (Vector2.Distance(transform.position, destination) < 0.5f)
-                {
-                    IInteractable interactable = task.GetComponent<IInteractable>();
-                    interactable.Interact(this);
-                }
-                return;
+                case TaskType.GatherResource:
+                    MoveTo(CurrentTask.targetPosition, () => InteractWith(CurrentTask.targetObject));
+                    break;
+                case TaskType.Build:
+                    MoveTo(CurrentTask.targetPosition, () => InteractWith(CurrentTask.targetObject));
+                    break;
+                case TaskType.MoveToPosition:
+                    MoveTo(CurrentTask.targetPosition, () => CurrentTask = null);
+                    break;
             }
         }
+    }
 
+    private void InteractWith(GameObject targetObject)
+    {
+        IInteractable interactable = targetObject.GetComponent<IInteractable>();
+        if (interactable != null)
+        {
+            interactable.Interact(this);
+        }
+        // if completed the task, set the current task to null
+        if (interactable is Tree)
+        {
+            Tree buildingObject = interactable as Tree;
+            if (buildingObject.isCompleted)
+            {
+                CurrentTask = null;
+            }
+        }
+        if (interactable is Walls)
+        {
+            Walls buildingObject = interactable as Walls;
+            if (buildingObject.isCompleted)
+            {
+                CurrentTask = null;
+            }
+        }
+    }
+    
+    public void MoveTo(Vector3 targetPosition, Action onArrival)
+    {
+        StartCoroutine(MoveToCoroutine(targetPosition, onArrival));
+    }
 
-        // if (GameManager.instance.constructionToDo.Count > 0)
-        // {
-        //     //Get the first task
-        //     GameObject task = GameManager.instance.constructionToDo[0];
-        //     //Set the destination
-        //     AID.target = task.transform;
-        //     destination = task.transform.position;
-        //     // Call The Interact Method
+    private IEnumerator MoveToCoroutine(Vector3 targetPosition, Action onArrival)
+    {
+        while (Vector2.Distance(transform.position, targetPosition) > 0.5f)
+        {
+            AID.target = CurrentTask.targetObject.transform;
+            yield return null;
+        }
 
-        //     if (Vector2.Distance(transform.position, destination) < 0.5f)
-        //     {
-        //         IInteractable interactable = task.GetComponent<IInteractable>();
-        //         interactable.Interact(this);
-        //     }
-        //     // IInteractable interactable = task.GetComponent<IInteractable>();
-        //     // interactable.Interact(this);
-        // }
+        onArrival?.Invoke();
     }
 
     private GameObject coorObject;

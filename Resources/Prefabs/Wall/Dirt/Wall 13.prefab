@@ -148,12 +148,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6e3c030172d834a43bd648ccb407c17f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isComplete: 0
   resourceType: 0
   resourceAmount: 0
+  requiredResources: 5
+  worker: {fileID: 0}
+  isGathering: 0
+  taskType: 1
+  isComplete: 0
   updateRadius: 5
   constructionTime: 2
-  worker: {fileID: 0}
+  wallPrefab: {fileID: 0}
+  wallPreviewPrefab: {fileID: 0}
 --- !u!50 &8869050697111833315
 Rigidbody2D:
   serializedVersion: 5

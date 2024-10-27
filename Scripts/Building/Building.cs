@@ -157,7 +157,7 @@ public class Building : MonoBehaviour
                 //Debug but warning
                 wallPositions.Add(pos);
                 objects.Add(pos, wall);
-                gameManager.constructionToDo.Add(wall);
+                gameManager.AddTask(wall);
                 wall.GetComponent<Walls>().GridPosition = pos;
                 //Update the graph
                 UpdateGraphNearObject(worldPos);
@@ -182,7 +182,7 @@ public class Building : MonoBehaviour
                 //Debug but warning
                 floorPositions.Add(pos);
                 objects.Add(pos, floor);
-                gameManager.constructionToDo.Add(floor);
+                gameManager.AddTask(floor);
                 floor.GetComponent<Floor>().GridPosition = pos;
                 //Update the graph
                 UpdateGraphNearObject(worldPos);

@@ -2,10 +2,8 @@ using UnityEngine;
 
 public class Floor : BuildingObject, IInteractable
 {
-    public Pawns worker;
+    public TaskType taskType;
     public bool isComplete = false;
-    public ResourceType resourceType;
-    public int resourceAmount;
     private Color32 originalColor;
     public float constructionTime = 5f;
 
@@ -75,12 +73,12 @@ public class Floor : BuildingObject, IInteractable
         }
     }
 
+
     public void Interact(Pawns pawns)
     {
         if (worker == null)
         {
             worker = pawns;
-            worker.task = this.gameObject;
         }
     }
 

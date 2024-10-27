@@ -100,8 +100,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2b3e9bc1dc7537d4185b027877a164a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worker: {fileID: 0}
-  isComplete: 0
   resourceType: 0
   resourceAmount: 0
+  requiredResources: 5
+  worker: {fileID: 0}
+  isGathering: 0
+  isCompleted: 0
+  taskType: 0
+  isComplete: 0
   constructionTime: 5
+  floorPrefab: {fileID: 0}
+  floorPreviewPrefab: {fileID: 0}

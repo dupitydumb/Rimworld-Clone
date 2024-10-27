@@ -177,3 +177,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cutTime: 3
   worker: {fileID: 0}
+  isCompleted: 0
+  taskType: 0
