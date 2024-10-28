@@ -29,7 +29,21 @@ public class Items : MonoBehaviour, IInteractable
     // Update is called once per frame
     void Update()
     {
-        
+        if (Vector2.Distance(transform.position, worker.transform.position) < 0.5f && isWillMove)
+        {
+            if (!isCarried)
+            {
+                AddItem(item.itemName, item.amount, worker);
+                GameManager.instance.AddTask(target);
+                GameManager.instance.resourcesManager.resources.Remove(gameObject);
+                Destroy(gameObject);
+            }
+
+            if (target != null)
+            {
+                worker.AID.target = target.transform;
+            }
+        }
     }
 
     //OnMouseStay is called every frame the mouse is over the object
@@ -41,19 +55,6 @@ public class Items : MonoBehaviour, IInteractable
     public void Interact(Pawns pawns)
     {
         worker = pawns;
-
-        if (!isCarried)
-        {
-            AddItem(item.itemName, item.amount, pawns);
-            GameManager.instance.AddTask(target);
-            GameManager.instance.resourcesManager.resources.Remove(gameObject);
-            Destroy(gameObject);
-        }
-
-        if (target != null)
-        {
-            worker.AID.target = target.transform;
-        }
     }
 
     public void CancelInteraction()

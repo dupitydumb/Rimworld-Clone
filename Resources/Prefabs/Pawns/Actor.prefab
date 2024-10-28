@@ -65,8 +65,12 @@ MonoBehaviour:
   body: {fileID: 0}
   Speed: 1
   pathprefab: {fileID: 0}
+  AID: {fileID: 0}
   stuffCarried: []
-  destinations: []
+  currentTask:
+    taskType: 0
+    targetPosition: {x: 0, y: 0, z: 0}
+    targetObject: {fileID: 0}
 --- !u!70 &5259605946971894972
 CapsuleCollider2D:
   m_ObjectHideFlags: 0
