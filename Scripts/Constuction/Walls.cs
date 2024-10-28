@@ -63,10 +63,12 @@ public class Walls : BuildingObject, IInteractable
     }
 
     // Update is called once per frame
+
+    private bool isAddedToPending = false;
     void Update()
     {
         
-        if (Vector2.Distance(worker.transform.position, transform.position) < 0.8f && !isComplete)
+        if (Vector2.Distance(worker.transform.position, transform.position) < 1.5f && !isComplete)
         {
             if (resourceAmount >= requiredResources && worker != null && !isComplete)
             {
@@ -84,7 +86,7 @@ public class Walls : BuildingObject, IInteractable
                     //Items IInteractable.GetWorker();
                     resource.GetComponent<IInteractable>().Interact(worker);
                 }
-                if (Vector2.Distance(worker.transform.position, this.transform.position) < 0.8f)
+                else if (Vector2.Distance(worker.transform.position, this.transform.position) < 0.8f)
                 {
                     Debug.LogWarning("Gathering resources");
                     if (worker.stuffCarried.Count > 0)
@@ -94,14 +96,28 @@ public class Walls : BuildingObject, IInteractable
                             Debug.LogWarning(item.itemName + "/ " + resourceType.ToString());
                             if (item.itemName == resourceType.ToString())
                             {
-                                Debug.LogWarning("Resource ADDED");
-                                resourceAmount += item.amount;
-                                worker.stuffCarried.Remove(item);
+                                //Add needed resources to the construction
+                                int neededResources = requiredResources - resourceAmount;
+                                item.amount -= neededResources;
+                                resourceAmount += neededResources;
+                                if (item.amount <= 0)
+                                {
+                                    worker.stuffCarried.Remove(item);
+                                }
                                 break;
                             }
                         }
                     }
+                    else
+                    {
+                        GameManager.instance.taskManager.RemoveTask(this.gameObject);
+                        GameManager.instance.taskManager.pendingTasks.Add(new Task(taskType, gameObject.transform.position, this.gameObject));
+                        isAddedToPending = true;
+                        worker.CurrentTask.targetObject = null;
+                        worker = null;
+                    }
                 }
+                
             }
         }
         

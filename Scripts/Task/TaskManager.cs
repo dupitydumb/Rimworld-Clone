@@ -49,8 +49,8 @@ public class TaskManager : MonoBehaviour
 
     public void AddTask(Task task)
     {
-        //if task already exists in the queue, return
-        if (taskQueue.Contains(task))
+        //if task gameobject is the same return
+        if (task.targetObject != null && taskQueue.Any(t => t.targetObject == task.targetObject))
         {
             return;
         }
@@ -84,7 +84,7 @@ public class TaskManager : MonoBehaviour
     {
         foreach (Task task in pendingTasks)
         {
-            taskQueue.Enqueue(task);
+            AddTask(task);
         }
     }
 }

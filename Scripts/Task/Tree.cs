@@ -22,7 +22,7 @@ public class Tree : MonoBehaviour, IInteractable, ISelectable
     {
         if (worker != null)
         {
-            if (Vector2.Distance(worker.transform.position, transform.position) < 1f)
+            if (Vector2.Distance(worker.transform.position, transform.position) < 1.5)
             {
                 CutDownTree();
             }
