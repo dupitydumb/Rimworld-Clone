@@ -68,7 +68,7 @@ public class Walls : BuildingObject, IInteractable
     void Update()
     {
         
-        if (Vector2.Distance(worker.transform.position, transform.position) < 1.5f && !isComplete)
+        if (Vector2.Distance(worker.transform.position, transform.position) < 2f && !isComplete)
         {
             if (resourceAmount >= requiredResources && worker != null && !isComplete)
             {
@@ -76,17 +76,10 @@ public class Walls : BuildingObject, IInteractable
                 Debug.LogWarning("Building wall");
             }
 
-            if (resourceAmount < requiredResources && worker != null && !isComplete)
+            else if (resourceAmount < requiredResources && worker != null && !isComplete)
             {
                 GameObject resource = GameManager.instance.resourcesManager.GetResource(resourceType);
-                if (resource != null && !isResourcesAssigned)
-                {
-                    worker.AID.target = resource.transform;
-                    resource.GetComponent<Items>().MoveResourceToConstruction(this.gameObject);
-                    //Items IInteractable.GetWorker();
-                    resource.GetComponent<IInteractable>().Interact(worker);
-                }
-                else if (Vector2.Distance(worker.transform.position, this.transform.position) < 0.8f)
+                if (Vector2.Distance(worker.transform.position, this.transform.position) < 2f)
                 {
                     Debug.LogWarning("Gathering resources");
                     if (worker.stuffCarried.Count > 0)
@@ -96,10 +89,19 @@ public class Walls : BuildingObject, IInteractable
                             Debug.LogWarning(item.itemName + "/ " + resourceType.ToString());
                             if (item.itemName == resourceType.ToString())
                             {
-                                //Add needed resources to the construction
-                                int neededResources = requiredResources - resourceAmount;
-                                item.amount -= neededResources;
-                                resourceAmount += neededResources;
+                                //Add needed resources to the construction if the worker is carrying the needed resources
+                                int neededAmount = requiredResources - resourceAmount;
+                                if (item.amount >= neededAmount)
+                                {
+                                    resourceAmount += neededAmount;
+                                    item.amount -= neededAmount;
+                                }
+                                else
+                                {
+                                    resourceAmount += item.amount;
+                                    item.amount = 0;
+                                }
+
                                 if (item.amount <= 0)
                                 {
                                     worker.stuffCarried.Remove(item);
@@ -107,6 +109,13 @@ public class Walls : BuildingObject, IInteractable
                                 break;
                             }
                         }
+                    }
+                    else if (worker.stuffCarried.Count <= 0 && resource != null && !isResourcesAssigned)
+                    {
+                        worker.AID.target = resource.transform;
+                        resource.GetComponent<Items>().MoveResourceToConstruction(this.gameObject);
+                        //Items IInteractable.GetWorker();
+                        resource.GetComponent<IInteractable>().Interact(worker);
                     }
                     else
                     {
