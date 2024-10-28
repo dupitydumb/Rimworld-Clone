@@ -49,7 +49,11 @@ public class TaskManager : MonoBehaviour
 
     public void AddTask(Task task)
     {
-        Debug.LogWarning("Task added");
+        //if task already exists in the queue, return
+        if (taskQueue.Contains(task))
+        {
+            return;
+        }
         taskQueue.Enqueue(task);
     }
 
@@ -67,7 +71,7 @@ public class TaskManager : MonoBehaviour
 
     public void RemoveTask(GameObject task)
     {
-        // Remove task where game object is the target object
+        // Remove task where GameOject is the targetObject
         Task taskToRemove = taskQueue.FirstOrDefault(t => t.targetObject == task);
         if (taskToRemove != null)
         {
@@ -82,7 +86,6 @@ public class TaskManager : MonoBehaviour
         {
             taskQueue.Enqueue(task);
         }
-        pendingTasks.Clear();
     }
 }
 

@@ -49,6 +49,11 @@ public class Items : MonoBehaviour, IInteractable
             GameManager.instance.resourcesManager.resources.Remove(gameObject);
             Destroy(gameObject);
         }
+
+        if (target != null)
+        {
+            worker.AID.target = target.transform;
+        }
     }
 
     public void CancelInteraction()
@@ -72,7 +77,7 @@ public class Items : MonoBehaviour, IInteractable
         return worker;
     }
 
-    void AddItem(string item, int amount, Pawns pawns)
+    public void AddItem(string item, int amount, Pawns pawns)
     {
         InventoryItem inventoryItem = pawns.stuffCarried.Find(i => i.itemName == item);
         if (inventoryItem != null)
@@ -83,5 +88,6 @@ public class Items : MonoBehaviour, IInteractable
         {
             pawns.stuffCarried.Add(new InventoryItem { itemName = item, amount = amount, itemGO = this.gameObject });
         }
+        isCarried = true;
     }
 }

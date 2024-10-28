@@ -65,72 +65,91 @@ public class Walls : BuildingObject, IInteractable
     // Update is called once per frame
     void Update()
     {
-        if (resourceAmount >= requiredResources && worker != null)
+        
+        if (Vector2.Distance(worker.transform.position, transform.position) < 0.8f && !isComplete)
         {
-            if (Vector2.Distance(worker.transform.position, transform.position) < 0.8f)
+            if (resourceAmount >= requiredResources && worker != null && !isComplete)
             {
                 BuildWall();
                 Debug.LogWarning("Building wall");
             }
-        }
-        else if (worker != null)
-        {
-            //Try add resource from pawn stuff carried
-            bool isFound = false;
-            foreach (InventoryItem item in worker.stuffCarried)
-            {
-                if (item.itemName == resourceType.ToString())
-                {
-                    //Add resources until required resources are met
-                    if (resourceAmount < requiredResources)
-                    {
-                        resourceAmount += item.amount;
-                        isFound = true;
-                    }
 
-                    //Remove number of resources from pawn
-                    foreach (InventoryItem stuff in worker.stuffCarried)
+            if (resourceAmount < requiredResources && worker != null && !isComplete)
+            {
+                GameObject resource = GameManager.instance.resourcesManager.GetResource(resourceType);
+                if (resource != null && !isResourcesAssigned)
+                {
+                    worker.AID.target = resource.transform;
+                    resource.GetComponent<Items>().MoveResourceToConstruction(this.gameObject);
+                    //Items IInteractable.GetWorker();
+                    resource.GetComponent<IInteractable>().Interact(worker);
+                }
+                if (Vector2.Distance(worker.transform.position, this.transform.position) < 0.8f)
+                {
+                    Debug.LogWarning("Gathering resources");
+                    if (worker.stuffCarried.Count > 0)
                     {
-                        if (stuff.itemName == resourceType.ToString())
+                        foreach (InventoryItem item in worker.stuffCarried)
                         {
-                            stuff.amount -= item.amount;
-                            if (stuff.amount <= 0)
+                            Debug.LogWarning(item.itemName + "/ " + resourceType.ToString());
+                            if (item.itemName == resourceType.ToString())
                             {
-                                worker.stuffCarried.Remove(stuff);
+                                Debug.LogWarning("Resource ADDED");
+                                resourceAmount += item.amount;
+                                worker.stuffCarried.Remove(item);
+                                break;
                             }
-                            break;
                         }
                     }
-                    break;
                 }
-                
-            }
-            if (!isFound && !isResourcesAssigned)
-            {
-                if (GameManager.instance.resourcesManager.IsResoucesAvailable(resourceType))
-                {
-                    Debug.LogWarning("Resources available");
-                    worker.CurrentTask.targetObject = null;
-                    GameManager.instance.resourcesManager.AssignResourceTask(gameObject, resourceType);
-                    isResourcesAssigned = true;
-                }
-                else if (!isPending)
-                {
-                    Debug.LogWarning("No resources available");
-                    worker.CurrentTask.targetObject = null;
-                    worker = null;
-                    GameManager.instance.RemoveTask(gameObject);
-                    GameManager.instance.taskManager.pendingTasks.Add(new Task(TaskType.GatherResource, transform.position, gameObject));
-                    isResourcesAssigned = false;
-                    isPending = true;
-                }
-                Debug.LogWarning("$$No resources available$$");
-            }
-            else
-            {
-                isResourcesAssigned = false;
             }
         }
+        
+        // if (resourceAmount >= requiredResources && worker != null && !isComplete)
+        // {
+        //     if (Vector2.Distance(worker.transform.position, transform.position) < 0.8f)
+        //     {
+        //         BuildWall();
+        //         Debug.LogWarning("Building wall");
+        //     }
+        // }
+        // if (resourceAmount < requiredResources && worker != null && !isComplete)
+        // {
+        //     GameObject resource = GameManager.instance.resourcesManager.GetResource(resourceType);
+        //     if (resource != null && !isResourcesAssigned)
+        //     {
+        //         worker.AID.target = resource.transform;
+
+        //         if (Vector2.Distance(worker.transform.position, resource.transform.position) < 0.8f)
+        //         {
+        //             Items items = resource.GetComponent<Items>();
+        //             resource.GetComponent<Items>().AddItem(resourceType.ToString(), items.item.amount, worker);
+        //             items.item.amount = 0;
+        //             Destroy(resource);
+        //             worker.AID.target = this.transform;
+        //             isResourcesAssigned = true;
+        //         }
+        //     }
+        //     if (Vector2.Distance(worker.transform.position, this.transform.position) < 0.8f)
+        //     {
+        //         Debug.LogWarning("Gathering resources");
+        //         if (worker.stuffCarried.Count > 0)
+        //         {
+        //             foreach (InventoryItem item in worker.stuffCarried)
+        //             {
+        //                 Debug.LogWarning(item.itemName + "/ " + resourceType.ToString());
+        //                 if (item.itemName == resourceType.ToString())
+        //                 {
+        //                     Debug.LogWarning("Resource ADDED");
+        //                     resourceAmount += item.amount;
+        //                     worker.stuffCarried.Remove(item);
+        //                     break;
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+        
     }
     bool isPending = false;
     bool isResourcesAssigned = false;
@@ -179,10 +198,7 @@ public class Walls : BuildingObject, IInteractable
     }
     public override void Place(Vector3Int gridPosition, Grid grid, GameManager gameManager)
     {
-        Vector3 worldPos = grid.GetCellCenterWorld(gridPosition);
-        GameObject wall = Instantiate(wallPrefab, worldPos, Quaternion.identity);
-        GridPosition = gridPosition;
-        gameManager.AddTask(wall);
+        
     }
 
     public override void ShowPreview(Vector3Int gridPosition, Grid grid)
@@ -206,21 +222,16 @@ public class Walls : BuildingObject, IInteractable
         constructionTime -= Time.deltaTime;
         if (constructionTime <= 0)
         {
-            // Find a safe position for the worker
+            GameManager.instance.RemoveTask(gameObject);
             Vector3 safePosition = FindSafePosition(worker.transform.position);
-
-            // Move the worker to the safe position
             worker.transform.position = safePosition;
-
-            // Enable collision
-   
             GetComponent<BoxCollider2D>().enabled = true;
             // Set color to opaque
             GetComponent<SpriteRenderer>().color = originalColor;
             isComplete = true;
-            GameManager.instance.RemoveTask(gameObject);
             worker.CurrentTask.targetObject = null;
             worker = null;
+            Debug.LogWarning("Wall built");
             // Update the graph near the wall
             UpdateGraphNearWall();
         }

@@ -56,4 +56,16 @@ public class ResourcesManager : MonoBehaviour
         }
     }
 
+    public GameObject GetResource(ResourceType resourceType)
+    {
+        foreach (GameObject resource in resources)
+        {
+            if (resource.GetComponent<Items>().resourceType == resourceType)
+            {
+                return resource;
+            }
+        }
+        return null;
+    }
+
 }
